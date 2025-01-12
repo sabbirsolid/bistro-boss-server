@@ -33,12 +33,43 @@ async function run() {
     const menuCollection = client.db("bistroBoss").collection("menu");
     const reviewCollection = client.db("bistroBoss").collection("reviews");
     const cartCollection = client.db("bistroBoss").collection("carts");
+
+    app.get('/users', async(req, res) =>{
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    })
     // user protection
     app.post('/users', async(req, res) =>{
       const user = req.body;
+      const query = {email: user.email}
+      const existingUser = await userCollection.findOne(query);
+      if(existingUser){
+        return res.send({message: 'user already in the db', insertedId: null})
+      }
       const result = await userCollection.insertOne(user);
       res.send(result);
     })
+    // update
+    app.patch('/users/:id', async(req, res) =>{
+      const filter = {_id: new ObjectId(req.params.id)}
+      const updatedDoc = {
+        $set: {
+          role: 'admin'
+        }
+        
+      }
+      const result = await userCollection.updateOne(updatedDoc);
+      res.send(result);
+    })
+
+    // delete user
+    app.delete('/users/:id', async(req, res) =>{
+      const query = {_id: new ObjectId(req.params.id)}
+      const result = await userCollection.deleteOne(query);
+      res.send(result);
+    })
+
+    // getting menu items
     app.get("/menu", async(req, res) =>{
       const result = await menuCollection.find().toArray();
       res.send(result);
