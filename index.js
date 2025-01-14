@@ -42,31 +42,31 @@ async function run() {
       res.send({ token });
     });
 
-    const verifyToken = (req, res, next) =>{
-      if(!req.headers.authorization){
-        return res.status(401).send({message: "Forbidden Access"})
+    const verifyToken = (req, res, next) => {
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: "Forbidden Access" });
       }
-      const token = req.headers.authorization.split(' ')[1];
-      console.log('inside verifyToken', token);
-      jwt.verify(token, process.env.JWT_TOKEN, (error, decoded) =>{
-        if(error){
-          return res.status(401).send({message: 'Forbidden Access'})
+      const token = req.headers.authorization.split(" ")[1];
+      console.log("inside verifyToken", token);
+      jwt.verify(token, process.env.JWT_TOKEN, (error, decoded) => {
+        if (error) {
+          return res.status(401).send({ message: "Forbidden Access" });
         }
         req.decoded = decoded;
         next();
-      })
-    }
+      });
+    };
 
-    const verifyAdmin = async (req, res, next) =>{
+    const verifyAdmin = async (req, res, next) => {
       const email = req.decoded.email;
-      const query = {email: email}
+      const query = { email: email };
       const user = await userCollection.findOne(query);
-      const isAdmin = user?.role === 'admin';
-      if(!isAdmin){
-        return res.status(403).send({message: 'Forbidden Access'})
+      const isAdmin = user?.role === "admin";
+      if (!isAdmin) {
+        return res.status(403).send({ message: "Forbidden Access" });
       }
       next();
-    }
+    };
 
     app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
       // console.log(req.headers);
@@ -74,19 +74,19 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/users/admin/:email',verifyToken, async(req, res) =>{
+    app.get("/users/admin/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
-      if(email !== req.decoded.email) {
-        return res.status(403).send({message: "Unauthorized Access"})
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "Unauthorized Access" });
       }
-      const query = {email: email}
-      const user = await userCollection.findOne(query)
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
       let admin = false;
-      if(user) {
-        admin = user?.role === 'admin'
+      if (user) {
+        admin = user?.role === "admin";
       }
-      res.send({admin});
-    })
+      res.send({ admin });
+    });
     // user protection
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -102,19 +102,24 @@ async function run() {
       res.send(result);
     });
     // make admin
-    app.patch("/users/admin/:id",verifyToken,verifyAdmin, async (req, res) => {
-      const filter = { _id: new ObjectId(req.params.id) };
-      const updatedDoc = {
-        $set: {
-          role: "admin",
-        },
-      };
-      const result = await userCollection.updateOne(filter, updatedDoc);
-      res.send(result);
-    });
+    app.patch(
+      "/users/admin/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const filter = { _id: new ObjectId(req.params.id) };
+        const updatedDoc = {
+          $set: {
+            role: "admin",
+          },
+        };
+        const result = await userCollection.updateOne(filter, updatedDoc);
+        res.send(result);
+      }
+    );
 
     // delete user
-    app.delete("/users/:id",verifyToken, verifyAdmin, async (req, res) => {
+    app.delete("/users/:id", verifyToken, verifyAdmin, async (req, res) => {
       const query = { _id: new ObjectId(req.params.id) };
       const result = await userCollection.deleteOne(query);
       res.send(result);
@@ -125,6 +130,11 @@ async function run() {
       const result = await menuCollection.find().toArray();
       res.send(result);
     });
+    app.post("/menu", verifyToken, verifyAdmin, async (req, res) => {
+      const result = await menuCollection.insertOne(req.body);
+      res.send(result);
+    });
+    
     app.get("/reviews", async (req, res) => {
       const result = await reviewCollection.find().toArray();
       res.send(result);
